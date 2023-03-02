@@ -7,6 +7,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class Coen6731TeamKankApplication {
 
     public static void main(String[] args) {
+
         SpringApplication.run(Coen6731TeamKankApplication.class, args);
     }
 
