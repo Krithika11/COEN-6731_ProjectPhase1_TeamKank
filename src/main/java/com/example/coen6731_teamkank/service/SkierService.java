@@ -17,10 +17,11 @@ public class SkierService {
     private final int maxRetryAttempts = 5;
     Random random = new Random();
 
-
+    //Retry logic
     @Retryable(value = ResponseStatusException.class, maxAttempts = maxRetryAttempts, backoff = @Backoff(delay = 1000))
     public String createSkierEventDetails(Skier skierDetails) {
         String response = "";
+        //Validating skier details from the input
         if (!isValidRange(skierDetails.getSkierId(), 1, 100000) ||
                 !isValidRange(skierDetails.getResortId(), 1, 10) ||
                 !isValidRange(skierDetails.getLiftId(), 1, 40) ||

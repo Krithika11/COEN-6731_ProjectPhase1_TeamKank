@@ -40,6 +40,7 @@ class MultithreadedClientTest {
 
     private RestTemplate restTemplate = new RestTemplate();
     protected final Logger logger = LoggerFactory.getLogger(this.getClass());
+    private static final String CloudPostURL = "http://155.248.238.80:9090/skierevent";
     private static final String postURL = "http://localhost:9090/skierevent";
     private static final int MAX_QUEUE_SIZE = 10000;
     private BlockingQueue<String> liftRideEventQueue = new ArrayBlockingQueue<>(MAX_QUEUE_SIZE);
@@ -64,15 +65,15 @@ class MultithreadedClientTest {
         String skierEventJson = gson.toJson(skierService.generateEvent());
         long startTime = System.currentTimeMillis();
         //Sending 500 requests from a single thread
-        for(int i=0; i<500; i++) {
+        for(int i=0; i<=500; i++) {
             responses =  sendPostRequestNew(skierEventJson);
             responseList.add(responses);
         }
         long endTime = System.currentTimeMillis();
         long latency = endTime-startTime;
         Double numberOfRequestsPerSecond = (responseList.size()/(double) latency)*1000;
-        System.out.println(" Time taken for 500 requests to complete " + latency);
-        System.out.println(" Total Duration in Requests per second " + numberOfRequestsPerSecond);
+        logger.info(" Time taken for 500 requests to complete " + latency);
+        logger.info(" Total Duration in Requests per second " + numberOfRequestsPerSecond);
 
     }
 
@@ -150,10 +151,10 @@ class MultithreadedClientTest {
         Double totalDurationInRequestsPerSecond = (allResponses.size()/(double) wallTime)*totalPosts;
 
         // Printing response on Completion of al 10K requests
-        System.out.println("Number of successful requests sent " + successCount);
-        System.out.println("Number of unsuccessful requests sent " + (totalPosts - successCount));
-        System.out.println("Wall time " + wallTime+ " ms");
-        System.out.println("Total duration in requestsPerSecond " + String.format("%.3f",totalDurationInRequestsPerSecond));
+        logger.info("Number of successful requests sent " + successCount);
+        logger.info("Number of unsuccessful requests sent " + (totalPosts - successCount));
+        logger.info("Wall time " + wallTime+ " ms");
+        logger.info("Total duration in requestsPerSecond " + String.format("%.3f",totalDurationInRequestsPerSecond));
 
         // Recording details of Profiling Performance
         createCSVFile(latencies,startTimes,responses,statuses);
@@ -213,15 +214,15 @@ class MultithreadedClientTest {
 
         List<Long> latencyList = latencies.stream().sorted().collect(Collectors.toList());
         double sum = latencies.stream().mapToLong(Long::longValue).sum();
-        System.out.println("Mean response time is " + sum/latencies.size());
+        logger.info("Mean response time is " + sum/latencies.size());
 
-        System.out.println("Median response time is " + latencyList.get((latencies.size()/2)-1));
+        logger.info("Median response time is " + latencyList.get((latencies.size()/2)-1));
 
-        System.out.println("p99 response time is "+latencyList.get((int) (latencies.size()*0.99)));
+        logger.info("p99 response time is "+latencyList.get((int) (latencies.size()*0.99)));
 
-        System.out.println("Min response time is " + Collections.min(latencies));
+        logger.info("Min response time is " + Collections.min(latencies));
 
-        System.out.println("Max response time is " +Collections.max(latencies));
+        logger.info("Max response time is " +Collections.max(latencies));
     }
 
     public class ApiResponse {
