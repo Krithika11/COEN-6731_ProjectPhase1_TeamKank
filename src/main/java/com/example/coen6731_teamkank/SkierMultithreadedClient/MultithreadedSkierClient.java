@@ -96,7 +96,6 @@ public class MultithreadedSkierClient {
 
         for (String status : statuses) {
             logger.info(status);
-            logger.info(" ");
         }
 
         int successCount = statuses.stream().filter(resp -> resp.equals(HttpStatus.CREATED.toString())).toList().size();
@@ -104,6 +103,7 @@ public class MultithreadedSkierClient {
         Double totalThroughputInRequestsPerSecond = (allResponses.size() / wallTime) * 1000;
 
         // Printing response on Completion of al 10K requests
+        logger.info(" ");
         logger.info("* ON COMPLETION OF 10K POST REQUESTS------------------------");
         logger.info("1. Total Number of POST Requests: " + statuses.size());
         logger.info("1. Number of successful requests sent: " + successCount);
