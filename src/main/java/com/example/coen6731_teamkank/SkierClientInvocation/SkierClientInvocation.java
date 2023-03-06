@@ -19,49 +19,42 @@ import java.util.List;
         private static final String postURL = "http://localhost:9090/skierevent";
 
         public void skierClientInvocationOfPostRequests() {
-            ApiResponse responses = new ApiResponse();
             String skierEventJson = gson.toJson(new SkierService().generateEvent());
-            double startTime = System.currentTimeMillis();
+            double startTime = System.nanoTime();
             //Sending single request
-            responses =  sendPostRequestNew(skierEventJson);
-            double endTime = System.currentTimeMillis();
+            sendPostRequestNew(skierEventJson);
+            double endTime = System.nanoTime();
             double latency = endTime-startTime;
             logger.info("* ON COMPLETION OF A SINGLE POST REQUEST-----------------------");
-            logger.info("1. Time taken for a request to complete " + latency/1000 + " second");
+            logger.info("1. Time taken for a request to complete " + latency/1000000 + " ms");
 
     }
 
         public void skierClientInvocationOf500PostRequests() {
-            ApiResponse responses = new ApiResponse();
-            List<ApiResponse> responseList = new ArrayList<>();
+            Integer totalNumberOfRequests = 500;
             String skierEventJson = gson.toJson(new SkierService().generateEvent());
             double startTime = System.currentTimeMillis();
             //Sending 500 requests from a single thread
             for(int i=0; i<=500; i++) {
-                responses =  sendPostRequestNew(skierEventJson);
-                responseList.add(responses);
+                sendPostRequestNew(skierEventJson);
             }
             double endTime = System.currentTimeMillis();
             double latency = endTime-startTime;
-            Double numberOfRequestsPerSecond = (responseList.size()/latency)*1000;
+            Double numberOfRequestsPerSecond = (totalNumberOfRequests/latency)*1000;
             logger.info("* ON COMPLETION OF 500 POST REQUESTS------------------------");
-            logger.info("1. Time taken for 500 requests to complete " + latency/1000 + " seconds");
-            logger.info("2. Total Throughput in Requests per second " + numberOfRequestsPerSecond);
+            logger.info("1. Time taken for 500 requests to complete " + latency + " ms");
+            logger.info("2. Total Throughput in Requests per second " + String.format("%.3f",numberOfRequestsPerSecond));
             logger.info(" ");
 
         }
 
-        private ApiResponse sendPostRequestNew(String event) {
+        private void sendPostRequestNew(String event) {
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             HttpEntity<String> entity = new HttpEntity<>(event, headers);
-            Double startTime = Double.parseDouble(String.valueOf(System.currentTimeMillis()));
 
             ResponseEntity<String> response = restTemplate.exchange(
                 postURL, HttpMethod.POST, entity, String.class);
-            Double endTime = Double.parseDouble(String.valueOf(System.currentTimeMillis()));
-            Double latency = endTime - startTime;
-            return new ApiResponse(response.getBody(),latency,response.getStatusCode().toString(),startTime);
         }
     }

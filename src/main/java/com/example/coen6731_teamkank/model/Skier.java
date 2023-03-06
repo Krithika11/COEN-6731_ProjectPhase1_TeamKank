@@ -11,7 +11,8 @@ public class Skier {
     private Integer dayId;
     private Integer time;
 
-    public Skier(Integer skierId, Integer resortId, Integer liftId, Integer seasonId, Integer dayId, Integer time) {
+    public Skier(Integer skierId, Integer resortId, Integer liftId,
+                 Integer seasonId, Integer dayId, Integer time) {
         this.skierId = skierId;
         this.resortId = resortId;
         this.liftId = liftId;

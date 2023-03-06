@@ -1,6 +1,7 @@
 package com.example.coen6731_teamkank;
 
 
+import com.example.coen6731_teamkank.SkierMultithreadedClient.ApiResponse;
 import com.example.coen6731_teamkank.service.SkierService;
 import com.google.gson.Gson;
 import com.opencsv.CSVWriter;
@@ -21,7 +22,6 @@ import org.springframework.web.client.RestTemplate;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
@@ -44,6 +44,7 @@ class MultithreadedClientTest {
     private static final String postURL = "http://localhost:9090/skierevent";
     private static final int MAX_QUEUE_SIZE = 10000;
     private BlockingQueue<String> liftRideEventQueue = new ArrayBlockingQueue<>(MAX_QUEUE_SIZE);
+    boolean eventsGenerated = false;
 
     @Test
     void createSkierEvent() throws Exception {
@@ -63,16 +64,16 @@ class MultithreadedClientTest {
         ApiResponse responses = new ApiResponse();
         List<ApiResponse> responseList = new ArrayList<>();
         String skierEventJson = gson.toJson(skierService.generateEvent());
-        long startTime = System.currentTimeMillis();
+        long startTime = System.nanoTime();
         //Sending 500 requests from a single thread
         for(int i=0; i<=500; i++) {
             responses =  sendPostRequestNew(skierEventJson);
             responseList.add(responses);
         }
-        long endTime = System.currentTimeMillis();
+        long endTime = System.nanoTime();
         long latency = endTime-startTime;
         Double numberOfRequestsPerSecond = (responseList.size()/(double) latency)*1000;
-        logger.info(" Time taken for 500 requests to complete " + latency);
+        logger.info(" Time taken for 500 requests to complete " + latency/1000000);
         logger.info(" Total Duration in Requests per second " + numberOfRequestsPerSecond);
 
     }
@@ -86,18 +87,21 @@ class MultithreadedClientTest {
         int postsPerThread = 1000;
         ExecutorService executor = Executors.newFixedThreadPool(threadsToStart);
 
-        int numEventsGenerated = 0;
-        while (numEventsGenerated < totalPosts) {
+        Thread liftRideEventGenerator = new Thread(() -> {
+            for(int i=0;i<MAX_QUEUE_SIZE;i++) {
 
-            String event = gson.toJson(skierService.generateEvent());
-            try {
-                //Adding event details to liftRideEventQueue
-                liftRideEventQueue.put(event);
-                numEventsGenerated++;
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+                String event = gson.toJson(skierService.generateEvent());
+                try {
+                    //Adding event details to liftRideEventQueue
+                    liftRideEventQueue.put(event);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
             }
-        }
+            eventsGenerated = true;
+        });
+        liftRideEventGenerator.start();
+
             // Start 32 threads, each sending 1000 POST requests
             List<Future<List<ApiResponse>>> futures = new ArrayList<>();
             //Recording timestamp before the start time of 32 threads
@@ -105,16 +109,23 @@ class MultithreadedClientTest {
             for (int i = 0; i < threadsToStart; i++) {
 
                 Future<List<ApiResponse>> future = executor.submit(() -> {
+
                     int numPostsSent = 0;
                     List<ApiResponse> responses = new ArrayList<>();
                     //check for liftRideEventQueue to not be empty and thread size less than 1000
-                    while (!liftRideEventQueue.isEmpty() && numPostsSent < postsPerThread) {
+                    while(numPostsSent<postsPerThread) {
                         //decrementing liftRideEventQueue size
-                        String liftEvent = liftRideEventQueue.poll();
-                        if (liftEvent != null) {
-                            //hit the POST request
-                            responses.add(sendPostRequestNew(liftEvent));
-                            numPostsSent++;
+                        if (liftRideEventQueue.isEmpty() && eventsGenerated) {
+                            break;
+                        }
+                        else {
+                            try {
+                                String liftEvent = liftRideEventQueue.take();
+                                responses.add(sendPostRequestNew(liftEvent));
+                                numPostsSent++;
+                            } catch (InterruptedException e) {
+                                break;
+                            }
                         }
                     }
                     return responses;
@@ -125,35 +136,38 @@ class MultithreadedClientTest {
             // Wait for all threads to complete
             List<ApiResponse> allResponses = new ArrayList<>();
 
-            for (Future<List<ApiResponse>> future : futures) {
-                try {
-                    allResponses.addAll(future.get());
-                } catch (InterruptedException | ExecutionException e) {
-                    e.printStackTrace();
+            while(allResponses.size()<totalPosts) {
+                for (Future<List<ApiResponse>> future : futures) {
+                    try {
+                        allResponses.addAll(future.get());
+                    } catch (InterruptedException | ExecutionException e) {
+                        e.printStackTrace();
+                    }
+                }
+                if (allResponses.size() == totalPosts) {
+                    break;
                 }
             }
-
         //Recording timestamp after the end of 32 threads
         long endTime = System.currentTimeMillis();
             // Print all response
         List<String> responses = allResponses.stream().map(ApiResponse::getResponse).toList();
         List<String> statuses = allResponses.stream().map(ApiResponse::getStatus).toList();
-        List<Long> latencies = allResponses.stream().map(ApiResponse::getLatency).toList();
-        List<Long> startTimes = allResponses.stream().map(ApiResponse::getStartTime).toList();
+        List<Double> latencies = allResponses.stream().map(ApiResponse::getLatency).toList();
+        List<Double> startTimes = allResponses.stream().map(ApiResponse::getStartTime).toList();
 
             for (String status : statuses) {
                 System.out.println(status);
             }
 
-
         Integer successCount = statuses.stream().filter(resp -> resp.equals(HttpStatus.CREATED.toString())).toList().size();
         Long wallTime = endTime - startTime;
-        Double totalDurationInRequestsPerSecond = (allResponses.size()/(double) wallTime)*totalPosts;
+        Double totalDurationInRequestsPerSecond = ((totalPosts/(double) wallTime)*1000);
 
         // Printing response on Completion of al 10K requests
         logger.info("Number of successful requests sent " + successCount);
         logger.info("Number of unsuccessful requests sent " + (totalPosts - successCount));
-        logger.info("Wall time " + wallTime+ " ms");
+        logger.info("Wall time " + wallTime/1000+ " second");
         logger.info("Total duration in requestsPerSecond " + String.format("%.3f",totalDurationInRequestsPerSecond));
 
         // Recording details of Profiling Performance
@@ -168,11 +182,11 @@ class MultithreadedClientTest {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> entity = new HttpEntity<>(event, headers);
-        long startTime = System.currentTimeMillis();
+        double startTime = System.nanoTime();
         ResponseEntity<String> response = restTemplate.exchange(
                 postURL, HttpMethod.POST, entity, String.class);
-        long endtime = System.currentTimeMillis();
-        long latency = endtime - startTime;
+        long endtime = System.nanoTime();
+        double latency = endtime - startTime;
         return new ApiResponse(response.getBody(),latency,response.getStatusCode().toString(),startTime);
     }
 
@@ -187,14 +201,14 @@ class MultithreadedClientTest {
         return result.getResponse();
     }
 
-    public void createCSVFile(List<Long> latencies, List<Long> startTimes, List<String> responses, List<String> statuses){
+    public void createCSVFile(List<Double> latencies, List<Double> startTimes, List<String> responses, List<String> statuses){
         String fileName = "Profiling Performance.csv";
 
         try (FileWriter fileWriter = new FileWriter(fileName);
              CSVWriter csvWriter = new CSVWriter(fileWriter)) {
 
             // Write headers
-            csvWriter.writeNext(new String[] {"Start Time (Timestamp)", "Request Type", "Latency(ms)", "Response Code"});
+            csvWriter.writeNext(new String[] {"Start Time (Timestamp)", "Request Type", "Latency(ns)", "Response Code"});
 
             // Write data rows
             for (int i = 0; i < responses.size(); i++) {
@@ -210,46 +224,23 @@ class MultithreadedClientTest {
           }
     }
 
-    private void profilingPerformance(List<Long> latencies) {
+    private void profilingPerformance(List<Double> latencies) {
 
-        List<Long> latencyList = latencies.stream().sorted().collect(Collectors.toList());
-        double sum = latencies.stream().mapToLong(Long::longValue).sum();
-        logger.info("Mean response time is " + sum/latencies.size());
+        List<Double> latencyList = latencies.stream().sorted().collect(Collectors.toList());
+        double sum = latencies.stream().mapToDouble(Double::doubleValue).sum();
+        long milliSeconds = 1000000;
+        sum = sum/milliSeconds; // converting nano to milli seconds
 
-        logger.info("Median response time is " + latencyList.get((latencies.size()/2)-1));
+        logger.info("Mean response time is " + String.format("%.3f", sum/latencies.size()));
 
-        logger.info("p99 response time is "+latencyList.get((int) (latencies.size()*0.99)));
+        logger.info("Median response time is " + latencyList.get(((latencies.size()/2)-1))/milliSeconds);
 
-        logger.info("Min response time is " + Collections.min(latencies));
+        logger.info("p99 response time is "+latencyList.get((int) (latencies.size()*0.99))/milliSeconds);
+         double minLatency = latencyList.stream().findFirst().get();
 
-        logger.info("Max response time is " +Collections.max(latencies));
+        logger.info("Min response time is " + String.format("%.3f", minLatency/milliSeconds));
+
+        logger.info("Max response time is " +latencyList.get((latencyList.size())-1)/milliSeconds);
     }
 
-    public class ApiResponse {
-        private String response;
-        private long latency;
-        private String status;
-        private long startTime;
-
-        public ApiResponse() {
-        }
-        public ApiResponse(String response, long latency, String status, long startTime) {
-            this.response = response;
-            this.latency = latency;
-            this.status = status;
-            this.startTime = startTime;
-        }
-        public String getResponse() {
-            return response;
-        }
-        public long getLatency() {
-            return latency;
-        }
-        public String getStatus() {
-            return status;
-        }
-        public long getStartTime() {
-            return startTime;
-        }
-    }
 }
