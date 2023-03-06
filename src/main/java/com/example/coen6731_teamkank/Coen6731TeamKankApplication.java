@@ -11,7 +11,7 @@ public class Coen6731TeamKankApplication {
     public static void main(String[] args) throws InterruptedException {
 
         SpringApplication.run(Coen6731TeamKankApplication.class, args);
-        
+
         MultithreadedSkierClient multithreadedSkierClient = new MultithreadedSkierClient();
         SkierClientInvocation skierClientInvocation = new SkierClientInvocation();
         multithreadedSkierClient.testMultithreadedClientFor10KPostRequests();

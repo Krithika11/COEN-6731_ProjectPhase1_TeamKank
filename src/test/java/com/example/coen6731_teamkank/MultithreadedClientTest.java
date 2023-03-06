@@ -40,8 +40,8 @@ class MultithreadedClientTest {
 
     private RestTemplate restTemplate = new RestTemplate();
     protected final Logger logger = LoggerFactory.getLogger(this.getClass());
-    private static final String CloudPostURL = "http://155.248.238.80:9090/skierevent";
-    private static final String postURL = "http://localhost:9090/skierevent";
+    private static final String postURL = "http://155.248.238.80:9090/coen6731/skierevent";
+    private static final String localPostURL = "http://localhost:9090/skierevent";
     private static final int MAX_QUEUE_SIZE = 10000;
     private BlockingQueue<String> liftRideEventQueue = new ArrayBlockingQueue<>(MAX_QUEUE_SIZE);
     boolean eventsGenerated = false;
@@ -51,7 +51,7 @@ class MultithreadedClientTest {
 
         String sampleSkierEventJson = gson.toJson(skierService.generateEvent());
 
-       String url = "/skierevent";
+       String url = "/coen6731/skierevent";
         MockHttpServletResponse response = postCall(url, sampleSkierEventJson);
 
         logger.info("Json input: " + sampleSkierEventJson);

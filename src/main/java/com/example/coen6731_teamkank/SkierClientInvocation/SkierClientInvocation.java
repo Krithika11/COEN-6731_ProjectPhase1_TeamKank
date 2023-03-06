@@ -1,6 +1,5 @@
 package com.example.coen6731_teamkank.SkierClientInvocation;
 
-import com.example.coen6731_teamkank.SkierMultithreadedClient.ApiResponse;
 import com.example.coen6731_teamkank.service.SkierService;
 import com.google.gson.Gson;
 import org.slf4j.Logger;
@@ -8,15 +7,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.*;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.ArrayList;
-import java.util.List;
-
     public class SkierClientInvocation {
         private Gson gson = new Gson();
 
         private RestTemplate restTemplate = new RestTemplate();
         protected final Logger logger = LoggerFactory.getLogger(this.getClass());
-        private static final String postURL = "http://localhost:9090/skierevent";
+        private static final String localPostURL = "http://localhost:9090/coen6731/skierevent";
+        private static final String postURL = "http://155.248.238.80:9090/coen6731/skierevent";
 
         public void skierClientInvocationOfPostRequests() {
             String skierEventJson = gson.toJson(new SkierService().generateEvent());

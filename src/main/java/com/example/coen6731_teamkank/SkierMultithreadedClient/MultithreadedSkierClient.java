@@ -13,7 +13,6 @@ import org.springframework.web.client.RestTemplate;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
@@ -28,8 +27,8 @@ public class MultithreadedSkierClient {
 
     private RestTemplate restTemplate = new RestTemplate();
     protected final Logger logger = LoggerFactory.getLogger(this.getClass());
-    private static final String CloudPostURL = "http://155.248.238.80:9090/skierevent";
-    private static final String postURL = "http://localhost:9090/skierevent";
+    private static final String postURL = "http://155.248.238.80:9090/coen6731/skierevent";
+    private static final String localPostURL = "http://localhost:9090/coen6731/skierevent";
     private static final int MAX_QUEUE_SIZE = 10000;
     private BlockingQueue<String> liftRideEventQueue = new ArrayBlockingQueue<>(MAX_QUEUE_SIZE);
     boolean eventsGenerated = false;
